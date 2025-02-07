@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Find Nearby Dermatologists</title>
+  <style>
+    #map {
+      height: 80vh;
+      width: 100%;
+    }
+    .container {
+      padding: 20px;
+    }
+    .search-container {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    input {
+      padding: 10px;
+      width: 300px;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 style="text-align: center;">Find Nearby Dermatologists</h1>
+    <div class="search-container">
+      <input type="text" id="locationInput" placeholder="Enter your location" />
+      <!-- The button currently re-initializes the map using geolocation.
+           You could extend this to use the input value with geocoding if needed. -->
+      <button onclick="initMap()">Search</button>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <script>
+    let map;
+    let service;
+    let infowindow;
+
+    function initMap() {
+      // Try HTML5 geolocation first
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const userLocation = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+
+            // Initialize the map centered on the user's location
+            map = new google.maps.Map(document.getElementById("map"), {
+              center: userLocation,
+              zoom: 13,
+            });
+
+            infowindow = new google.maps.InfoWindow();
+            service = new google.maps.places.PlacesService(map);
+
+            // Search for nearby dermatologists
+            searchNearby(userLocation);
+          },
+          () => {
+            // Geolocation failed; use default location
+            handleLocationError(true);
+          }
+        );
+      } else {
+        // Browser doesn't support Geolocation
+        handleLocationError(false);
+      }
+    }
+
+    function searchNearby(location) {
+      const request = {
+        location: location,
+        radius: "10000", // 10km radius
+        keyword: "dermatologist"
+      };
+
+      service.nearbySearch(request, (results, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK) {
+          for (let i = 0; i < results.length; i++) {
+            createMarker(results[i]);
+          }
+        }
+      });
+    }
+
+    function createMarker(place) {
+      if (!place.geometry || !place.geometry.location) return;
+
+      const marker = new google.maps.Marker({
+        map: map,
+        position: place.geometry.location,
+        title: place.name
+      });
+
+      google.maps.event.addListener(marker, "click", () => {
+        infowindow.setContent(
+          `<div><strong>${place.name}</strong><br>${place.vicinity}</div>`
+        );
+        infowindow.open(map, marker);
+      });
+    }
+
+    function handleLocationError(browserHasGeolocation) {
+      // Default location: New York City
+      const defaultLocation = { lat: 40.7128, lng: -74.0060 };
+
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: defaultLocation,
+        zoom: 13
+      });
+
+      infowindow = new google.maps.InfoWindow();
+      service = new google.maps.places.PlacesService(map);
+
+      searchNearby(defaultLocation);
+
+      infowindow.setContent(
+        browserHasGeolocation
+          ? "Error: Geolocation service failed. Showing default location."
+          : "Error: Your browser doesn't support geolocation. Showing default location."
+      );
+      infowindow.open(map);
+    }
+  </script>
+
+  <!-- Replace YOUR_API_KEY with your actual Google Maps API key -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCm-RLJLFEWN8kcx3tXou1CAD-DoyBRcPg=places&callback=initMap"
+    async
+    defer
+  ></script>
+</body>
+</html>
